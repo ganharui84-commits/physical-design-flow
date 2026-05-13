@@ -26,11 +26,11 @@
 4.  **Constraint Mode (工作模式约束)**: 定义芯片的工作模式（如 Functional 正常工作、Scan-Shift 测试扫描），对应不同的 SDC 时序约束文件。
 5.  **Analysis View (全局分析视角)**: 将特定的 `Delay Corner` (物理环境) 与 `Constraint Mode` (工作模式) 绑定，供工具最终计算 Setup 和 Hold 的时序收敛情况。
 
-## 📐 核心规划与宏单元布局 (Floorplan & Macro Placement / フロアプランとマクロ配置)
+## 核心规划与宏单元布局 (Floorplan & Macro Placement / フロアプランとマクロ配置)
 
 本阶段核心目标：确定芯片整体物理尺寸，完成宏单元摆放，并插入必要的基础物理单元以满足底层工艺设计规则 (DRC)。
 
-**🔗 关联脚本**: `02_innovus_floorplan.tcl`, `floorplan_calculate.tcl`
+**关联脚本**: `02_innovus_floorplan.tcl`, `floorplan_calculate.tcl`
 
 ### 1. 核心面积与尺寸推导 (Core Sizing Strategy)
 在进行 `floorPlan` 设定前，采用“面积-间距反推法”来确定精确的物理尺寸：
