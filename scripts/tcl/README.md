@@ -25,3 +25,6 @@
 3.  **Delay Corner (物理延迟集合)**: 将 `Library Set` 与 `RC Corner` 组合。例如将最慢的晶体管与最悲观的寄生网络组合为 `slow_rcworst`，用于 Setup 检查。
 4.  **Constraint Mode (工作模式约束)**: 定义芯片的工作模式（如 Functional 正常工作、Scan-Shift 测试扫描），对应不同的 SDC 时序约束文件。
 5.  **Analysis View (全局分析视角)**: 将特定的 `Delay Corner` (物理环境) 与 `Constraint Mode` (工作模式) 绑定，供工具最终计算 Setup 和 Hold 的时序收敛情况。
+ ##布局阶段
+
+本阶段所用到的脚本参考：02_innovus_floorplan.tcl  floorplan_calculate.tcl
