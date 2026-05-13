@@ -1,5 +1,27 @@
 本リポジトリは、デジタルICバックエンド設計における、初期セットアップから最終的なGDSII出力（テープアウト）までのフィジカルデザイン（物理設計）の全工程をカバーしています。標準的なフローに加えて、実用的な自動化スクリプトや、SDC（Synopsys Design Constraints）の作成・最適化における高度なテクニックも収録しています。
-##对设计的初始化导入
-首先source 00.tcl。00.tcl主要负责一些基本项的设置，比如设置项目的名字，设置相关报告储存的路径，设置网表的查找路径，设置Tech LEF，Cell/Macro LEF/PEX Tech File的查找路径。其中，Tech LEF不包含任何具体的逻辑门或电路，只定义这套45nm工艺的全局物理规则，如金属层与通孔，设计规则，天线规则（Antenna Rules）；Cell/Macro LEF则包含了设计中用到的所有物理单元的抽象模型，如gsclib045_macro.lef/hvt_macro.lef提供标准单元的物理信息（比如与非门，触发器）。MEM1_256X32.lef/MEM2...提供了宏单元的物理信息。pdkIO.lef/pads.lef则提供芯片引脚的物理信息，用于芯片边界与外部封装的连接；PEX Tech File则代表寄生参数提取(Parasitic Extraction),在APR阶段中理想的线变成了实际的金属物理线，它们之间会产生寄生电阻与寄生电容。qrcTechFile是QRC工具专用的工艺文件，里面包含了极其详尽的3D寄生参数查找表，脚本中定义了三个Corner对应setup/hold的检查在MMMC设置中加载这些文件，工具才能准确计算出信号在真实导线上的延迟，从而完成最终的时序收敛
-其次source 01.tcl。01.tcl主要负责初始化设计与全局电源地网络的连接。除了对应00.tcl中相关内容外，set init_pwr_net 与set init_mmmc_file则分别定义此设计的逻辑电源网名与指定MMMC。核心命令为init_design，setIoFlowFlag 0则表示不适用老版本的I/O flow。最后则通过globalNetConnect在全局范围内查找所有类型为pgpin且名字叫VDD/VSS的物理引脚，把它们在逻辑上全部挂靠到名为VDD/VSS的全局电源/地网络上，只有完成这一步，后续在Powerplan阶段ring&stripe，铺设rail时工具才能正确把物理连线与逻辑网络匹配起来，避免出现开路或短路的DRC违例。
-最后source viewDefinition.tcl，即mmmc环境
+## 设计初始化与环境导入 (Design Initialization & Setup / 設計の初期化とセットアップ)
+
+本阶段主要通过三个核心 Tcl 脚本完成物理设计环境的搭建。
+
+### 1. 基础环境与库路径配置 (`00.tcl`)
+主要负责设置项目名称、报告存储路径，以及各类物理库的查找路径。
+*   **Tech LEF**: 定义 45nm 工艺的全局物理规则（如金属层、通孔、设计规则 Design Rules、天线规则 Antenna Rules）。不包含具体逻辑电路。
+*   **Cell/Macro LEF**: 提供设计中用到的物理单元抽象模型。
+    *   `gsclib045_macro.lef` 等：标准单元 (Standard Cell) 的物理信息（如 NAND, FF）。
+    *   `MEM1_256X32.lef` 等：宏单元 (Macro) 的物理信息。
+    *   `pdkIO.lef` 等：芯片引脚 (I/O Pad) 的物理信息，用于连接外部封装。
+*   **PEX Tech File (`qrcTechFile`)**: 寄生参数提取 (Parasitic Extraction) 专用的工艺文件，包含 3D 寄生参数查找表。为工具计算真实金属导线上的寄生电阻 (R) 与电容 (C) 提供基准，是完成最终时序收敛的关键。
+
+### 2. 设计导入与全局电源地连接 (`01.tcl`)
+核心命令为 `init_design`，负责将网表与物理库结合。
+*   **设置电源网络**: 通过 `set init_pwr_net` 和 `set init_gnd_net` 定义逻辑电源网名 (VDD) 与地网名 (VSS)。
+*   **全局挂靠 (Connect PG)**: 使用 `globalNetConnect` 在全局范围内查找所有 `pgpin` 类型的物理引脚，将其逻辑上挂靠到 VDD/VSS 网络上。
+    *   *注：这一步至关重要。只有完成挂靠，后续在 Powerplan 阶段打环 (Ring)、走条带 (Stripe) 及铺设 rail 时，工具才能正确匹配物理连线与逻辑网络，避免开路或短路 DRC 违例。*
+
+### 3. MMMC 时序视角配置 (`viewDefinition.tcl`)
+多模式多端角 (Multi-Mode Multi-Corner) 视角的配置机制，采用自底向上的逻辑：
+1.  **Library Set (Cell Delay 基础)**: 指向 `.lib` 文件，定义标准单元在特定 PVT 条件下的内部延迟，反映晶体管工艺角（如 FF, SS）。
+2.  **RC Corner (Net Delay 基础)**: 指向 `qrcTechFile` 并设定温度系数，定义互连线的寄生 RC 提取参数。
+3.  **Delay Corner (物理延迟集合)**: 将 `Library Set` 与 `RC Corner` 组合。例如将最慢的晶体管与最悲观的寄生网络组合为 `slow_rcworst`，用于 Setup 检查。
+4.  **Constraint Mode (工作模式约束)**: 定义芯片的工作模式（如 Functional 正常工作、Scan-Shift 测试扫描），对应不同的 SDC 时序约束文件。
+5.  **Analysis View (全局分析视角)**: 将特定的 `Delay Corner` (物理环境) 与 `Constraint Mode` (工作模式) 绑定，供工具最终计算 Setup 和 Hold 的时序收敛情况。
