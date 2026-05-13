@@ -28,3 +28,4 @@
  ##布局阶段
 
 本阶段所用到的脚本参考：02_innovus_floorplan.tcl  floorplan_calculate.tcl
+规划floorplan的大小前先通过floorplan_calculate.tcl计算好大概需要的面积，然后进行规划。在此LEON项目中，因为四个Hard Macro都是长方形，所以core采取长方形的规划方式。考虑到将来的电源环规划（针对四个Hard Macro单独打电源环而不是在core与die之间打环），所以给
