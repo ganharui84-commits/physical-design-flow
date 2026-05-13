@@ -1,1 +1,5 @@
 本リポジトリは、デジタルICバックエンド設計における、初期セットアップから最終的なGDSII出力（テープアウト）までのフィジカルデザイン（物理設計）の全工程をカバーしています。標準的なフローに加えて、実用的な自動化スクリプトや、SDC（Synopsys Design Constraints）の作成・最適化における高度なテクニックも収録しています。
+##对设计的初始化导入
+首先source 00.tcl。00.tcl主要负责一些基本项的设置，比如设置项目的名字，设置相关报告储存的路径，设置网表的查找路径，设置Tech LEF，Cell/Macro LEF/PEX Tech File的查找路径。其中，Tech LEF不包含任何具体的逻辑门或电路，只定义这套45nm工艺的全局物理规则，如金属层与通孔，设计规则，天线规则（Antenna Rules）；Cell/Macro LEF则包含了设计中用到的所有物理单元的抽象模型，如gsclib045_macro.lef/hvt_macro.lef提供标准单元的物理信息（比如与非门，触发器）。MEM1_256X32.lef/MEM2...提供了宏单元的物理信息。pdkIO.lef/pads.lef则提供芯片引脚的物理信息，用于芯片边界与外部封装的连接；PEX Tech File则代表寄生参数提取(Parasitic Extraction),在APR阶段中理想的线变成了实际的金属物理线，它们之间会产生寄生电阻与寄生电容。qrcTechFile是QRC工具专用的工艺文件，里面包含了极其详尽的3D寄生参数查找表，脚本中定义了三个Corner对应setup/hold的检查在MMMC设置中加载这些文件，工具才能准确计算出信号在真实导线上的延迟，从而完成最终的时序收敛
+其次source 01.tcl。01.tcl主要负责初始化设计与全局电源地网络的连接。除了对应00.tcl中相关内容外，set init_pwr_net 与set init_mmmc_file则分别定义此设计的逻辑电源网名与指定MMMC。核心命令为init_design，setIoFlowFlag 0则表示不适用老版本的I/O flow。最后则通过globalNetConnect在全局范围内查找所有类型为pgpin且名字叫VDD/VSS的物理引脚，把它们在逻辑上全部挂靠到名为VDD/VSS的全局电源/地网络上，只有完成这一步，后续在Powerplan阶段ring&stripe，铺设rail时工具才能正确把物理连线与逻辑网络匹配起来，避免出现开路或短路的DRC违例。
+最后source viewDefinition.tcl，即mmmc环境
