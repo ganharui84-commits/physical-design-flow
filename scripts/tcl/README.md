@@ -54,3 +54,35 @@
 *   **插入物理单元 (Physical Cells Insertion)**:
     *   **End Cap Cell (エンドキャップセル)**: 插入在每个 Std Cell Row 的两端，保护行末标准单元的栅极免受制造过程中的物理损伤。
     *   **Well Tap Cell (ウェルタップセル)**: 按照工艺库规定的最大间距均匀打入，将 N-Well 和 P-Well 连接到电源和地，这是**防止闩锁效应 (Latch-up)** 的强制要求。
+
+## 3. 全局电源网络规划 (Power Network Planning / 電源網設計)
+
+本阶段核心目标：构建稳健的电源供给网络 (PDN, Power Delivery Network)，在满足底层绕线资源需求的前提下，有效抑制电压降 (IR Drop) 与电迁移 (EM) 违例。
+
+**关联脚本**: `03_innovus_powerplan.tcl`
+
+### 3.1 供电拓扑结构 (Power Delivery Topology)
+全局电源网络严格遵循 **Ring $\rightarrow$ Stripe $\rightarrow$ Rail** 的自顶向下构建顺序：
+1.  **Macro Ring (宏单元电源环 / マクロ電源リング)**: 针对本设计特征，优先围绕 4 个 Hard Macro 单独打环。
+2.  **Power Stripe (电源条带 / 電源ストライプ)**: 在 Ring 铺设完成后构建，其两端与 Macro Ring 的端口实现物理连接，形成主干电网。
+3.  **Power Rail (电源导轨 / 電源レール)**: 最后铺设于最底层 (通常为 M1)，与 Stripe 连接，直接为标准单元 (Standard Cell) 供电。
+
+### 3.2 电源条带布线策略 (Stripe Routing Strategy)
+在定义 Power Stripe 时，需通过精准的参数控制以避免物理冲突并保证电气可靠性：
+* **坐标与重叠规避**: 通过计算并设置合理的起始偏移 (`start_offset`) 与组间距 (`set_to_set_distance`)，确保高层 Stripe 的走线路径避开底层的 Macro Ring，防止通孔 (Via) 垂直砸中 Ring 导致短路。
+* **DRC 规则合规**: 查阅代工厂 (Foundry) 工艺规则表，严格设定 Stripe 之间的最小间距 (`spacing`)，以规避长平行金属线带来的间距违例 (Long-line Spacing Violation)。
+* **可靠性评估**: 结合整体芯片功耗评估，设定足够的 Stripe 宽度与分布密度，这是防止静态/动态电压降 (IR Drop) 和电迁移 (Electromigration / エレクトロマイグレーション) 的核心手段。
+
+### 3.3 阶梯式供电网络与通孔优化 (Stepped Mesh & Via Optimization)
+在规划由高层金属 (如 M9) 向底层 M1 供电的 `layer_change_range` 时，需综合权衡 IR Drop 与布线拥塞 (Congestion) 风险：
+
+**痛点分析 (Direct Drop-down Issues):**
+* **绕线拥堵**: 若允许从 M9 直接垂直打孔至 M1，且高层 Stripe 密度较大，会形成密集的“通孔柱 (Via Pillars)”，彻底切断中低层金属的连续布线轨道。
+* **局部压降**: 若为了缓解拥堵而拉宽高层 Stripe 间距，会导致 M1 上的供电接入点跨度过大。由于 M1 金属线径细、方块电阻大，电流在 M1 上的长距离传输极易在节点中段引发严重的局部 IR Drop 违例。
+
+**优化方案：阶梯式供电 (Stepped Power Supply / 階層的給電):**
+* **执行策略**: 引入中层金属（如 M5/M6）作为过渡层铺设次级 Stripe，形成“高层 $\rightarrow$ 中层 $\rightarrow$ 底层”的阶梯式网格。
+* **工程收益 (Pros)**: 
+    1.  **缓解 IR Drop**: 极大缩短了电流在底层高阻抗 M1 上的传输路径。
+    2.  **释放绕线空间**: 错开了高层-中层 Via 与中层-底层 Via 的物理位置。M2/M3 等底层金属获得了更连续的布线空间，便于标准单元进行局部复杂连线 (Local Routing)。
+* **工程妥协 (Cons)**: 次级 Stripe 会消耗部分中层金属的可用布线资源，需在 `place_opt_design` 后观察 Congestion Map 进行密度平衡。
