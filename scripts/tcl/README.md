@@ -69,8 +69,9 @@
 
 ### 3.2 电源条带布线策略 (Stripe Routing Strategy)
 在定义 Power Stripe 时，需通过精准的参数控制以避免物理冲突并保证电气可靠性：
-* **坐标与重叠规避**: 通过计算并设置合理的起始偏移 (`start_offset`) 与组间距 (`set_to_set_distance`)，确保高层 Stripe 的走线路径避开底层的 Macro Ring，防止通孔 (Via) 垂直砸中 Ring 导致短路。
+* **坐标与重叠规避**: 当VDD Stripe 与 VSS Ring 处于同一金属层时，存在物理相交导致短路的风险。必须通过精确计算起始偏移 (`start_offset`) 与组间距 (`set_to_set_distance`)，使 Stripe 的走线完美避开异极性的 Ring；或在 `addStripe` 脚本中运用 `-break_at` 等断开参数，强制 Stripe 在跨越异极性 Ring 时自动断开连线。
 * **DRC 规则合规**: 查阅代工厂 (Foundry) 工艺规则表，严格设定 Stripe 之间的最小间距 (`spacing`)，以规避长平行金属线带来的间距违例 (Long-line Spacing Violation)。
+* **宏单元内网隔离 (Macro Internal Blockage)**: 宏单元内部通常自带高层电源网络。打 Stripe 时需合理运用工具的 Macro Blockage 属性，防止 Stripe 错误地穿越宏单元内部，干扰 SRAM 自身的供电完整性(使用addStripe的-break_at或者手动在Macro区域创建一个Routing Blockage
 * **可靠性评估**: 结合整体芯片功耗评估，设定足够的 Stripe 宽度与分布密度，这是防止静态/动态电压降 (IR Drop) 和电迁移 (Electromigration / エレクトロマイグレーション) 的核心手段。
 
 ### 3.3 阶梯式供电网络与通孔优化 (Stepped Mesh & Via Optimization)
