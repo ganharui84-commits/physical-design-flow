@@ -89,4 +89,4 @@
 * **工程妥协 (Cons)**: 次级 Stripe 会消耗部分中层金属的可用布线资源，需在 `place_opt_design` 后观察 Congestion Map 进行密度平衡。
 
 
-进行placement opt前的约束：通过setDesignMode告诉工具芯片节点，便于后续opt，同时setAnalysisMoe开启OCV与cppr，并使用set_timing_derate设置合适的悲观量。关于setAnalysisMode -analysisType onchipVariation的man文档，官方指出的是此约束仅可以起到给capature路径找不同库的作用，例如分析setup时给capature端找ff corner,并不涉及悲观量的设置，故需要set_timing_derate给适当的悲观量。setOptMode可以在工具进行opt插入buffer时给插入的buffer进行命名，此项目暂时不考虑功耗，故-powerEffort none
+进行placement opt前的约束：通过setDesignMode告诉工具芯片节点，便于后续opt，同时setAnalysisMoe开启OCV与cppr，并使用set_timing_derate设置合适的悲观量。关于setAnalysisMode -analysisType onchipVariation的man文档，官方指出的是此约束仅可以起到给capature路径找不同operating condition的作用，例如分析setup时给capature端找ff corner,并不涉及悲观量的设置，故需要set_timing_derate给适当的悲观量。setOptMode可以在工具进行opt插入buffer时给插入的buffer进行命名，此项目暂时不考虑功耗，故-powerEffort none
