@@ -87,8 +87,6 @@
     1.  **缓解 IR Drop**: 极大缩短了电流在底层高阻抗 M1 上的传输路径。
     2.  **释放绕线空间**: 错开了高层-中层 Via 与中层-底层 Via 的物理位置。M2/M3 等底层金属获得了更连续的布线空间，便于标准单元进行局部复杂连线 (Local Routing)。
 * **工程妥协 (Cons)**: 次级 Stripe 会消耗部分中层金属的可用布线资源，需在 `place_opt_design` 后观察 Congestion Map 进行密度平衡。
-## 4. 工程化数据管理与存档规范 (Data Management & Archiving Specification / データ管理とアーカイブ)
 
-本规范旨在建立一套标准的目录结构与数据库阶段性存档（Database Save/Restore）机制，确保设计流程的可追溯性，并为后期的工程变更指令 (ECO, Engineering Change Order) 和排错 (Debug) 提供干净的切入点。
 
 进行placement opt前的约束：通过setDesignMode告诉工具芯片节点，便于后续opt，同时setAnalysisMoe开启OCV与cppr，并使用set_timing_derate设置合适的悲观量。关于setAnalysisMode -analysisType onchipVariation的man文档，官方指出的是此约束仅可以起到给capature路径找不同库的作用，例如分析setup时给capature端找ff corner,并不涉及悲观量的设置，故需要set_timing_derate给适当的悲观量。setOptMode可以在工具进行opt插入buffer时给插入的buffer进行命名，此项目暂时不考虑功耗，故-powerEffort none
