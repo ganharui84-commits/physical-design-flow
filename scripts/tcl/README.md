@@ -91,31 +91,4 @@
 
 本规范旨在建立一套标准的目录结构与数据库阶段性存档（Database Save/Restore）机制，确保设计流程的可追溯性，并为后期的工程变更指令 (ECO, Engineering Change Order) 和排错 (Debug) 提供干净的切入点。
 
-### 4.1 工业级目录树结构 (Industrial Directory Tree)
-在开启 Innovus 之前，必须在 Linux 环境下建立职责分明的底层目录。严禁将所有文件堆叠在同一目录下：
 
-* `workspace/` (项目根目录)
-    * `src/` 或 `inputs/`：存放外部导入的只读数据（综合后的 Netlist, SDC 约束, 物理库 LEF, 时序库 Liberty 等）。
-    * `scripts/` 或 `tcl/`：专门存放执行流程的 `.tcl` 脚本（如 `01_import.tcl`, `02_floorplan.tcl`）。
-    * `db/` 或 `enc/`：核心目录。专门存放每个阶段跑完后生成的 Innovus 数据库 (`.enc`)。
-    * `rpt/` 或 `reports/`：存放每个阶段生成的时序、面积、功耗、拥塞等文本报告。
-    * `log/`：存放工具运行时的终端输出日志。
-    * `work/`：Innovus 的启动目录。工具在此目录下启动，产生的临时文件全留在这里。
-
-### 4.2 里程碑数据库存档 (Milestone Database Archiving)
-**核心原则**：绝对不要使用 GUI 界面手动点击 Save。存档动作必须硬编码在每一个阶段 Tcl 脚本的最后一行，并且**数据库的命名必须与脚本前缀严格对齐**。
-
-在每一份对应的 Tcl 脚本末尾，强制添加对应的存档命令：
-
-```tcl
-# 01_innovus_import.tcl 末尾
-saveDesign ../db/01_import.enc
-
-# 02_innovus_floorplan.tcl 末尾
-saveDesign ../db/02_floorplan.enc
-
-# 03_innovus_powerplan.tcl 末尾
-saveDesign ../db/03_powerplan.enc
-
-# 04_innovus_placeopt.tcl 末尾
-saveDesign ../db/04_placeopt.enc
