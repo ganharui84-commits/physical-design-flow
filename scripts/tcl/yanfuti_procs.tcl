@@ -34,7 +34,12 @@ proc usr_disconnect_scan { args } {     proc定义usr_disconnect_scan函数{args
     #4，foreach inst_ptr：把找出来的成千上万个引脚指针装进一个循环里，挨个处理。
     ##3，提取信息与"防呆"过滤
     #进入循环后，针对每一个找到的SI引脚指针（inst_ptr),开始套报情报：
-    #1，
+    #1，第一行顺藤摸瓜，根据引脚指针，反查出这个引脚所属的逻辑门/触发器名称
+    #2，第二行继续，查出连在引脚上的线的名字
+    #3，第三行防御性编程，若引脚悬空（未连线），直接continue跳过，下一个。
+    ##4，执行断开
+    #1，puts $op "....." 即把双引号中的内容(.....)写进op中，op在最开始是给detach_scan_term.tcl中写入的。
+    #2，detachTerm ... ：是工具原生自带的真实断线命令，语法是detachTerm <实例名> <引脚名> <线名>
     if { [info exists pargs(-generate_only)] } {
         puts "CDF-Information: Please source the created file $pargs(-output_script)"
     } else {
@@ -42,14 +47,16 @@ proc usr_disconnect_scan { args } {     proc定义usr_disconnect_scan函数{args
         file delete -force $pargs(-output_script)
     }
 }
+##呼应首行的定义usr_disconnect_scan时所用到的args：args允许给函数后面跟参数，若跟了generate_only参数，那么执行if中的内容，即会提示用户source detach_scan_term.tcl中的内容，若未跟，则执行else中的内容，即直接source该tcl，source后进行删除。
+#另外注意最后一行的}，它对应的是首行的{，即以上所有内容都是在写proc这一个函数
 define_proc_arguments usr_disconnect_scan \
-    -info "set uncertainty for each design step" \
+   ## -info "set uncertainty for each design step" \ 可能是脚本不规范，暂时忽略
     -define_args {
         {-si_term           "SI term name for scan DFF, default is SI" "" string optional}
         {-output_script     "scenario name" "" string optional}
         {-generate_only     "generate script only, no execution" "" boolean optional}
 }
-
+##这一段是定义首段写的usr_disconnect_scan函数，后面可以在工具中对它进行-help查看与tab自动补全
 ##############################################################
 # END
 ##############################################################
