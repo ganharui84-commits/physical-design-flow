@@ -57,6 +57,40 @@ define_proc_arguments usr_disconnect_scan \
         {-generate_only     "generate script only, no execution" "" boolean optional}
 }
 ##这一段是定义首段写的usr_disconnect_scan函数，后面可以在工具中对它进行-help查看与tab自动补全
+# 最后的校验
+set disconnected_cnt 0
+
+# 2. 把所有的 SI 引脚指针抓到一个完整的列表变量中，方便后续求总长度
+set all_si_pins [dbGet top.insts.instTerms.name */$pargs(-si_term) -p]
+
+# 3. 统计并遍历
+if {$all_si_pins != "0x0"} {
+    set total_scan_ffs [llength $all_si_pins]
+    
+    foreach inst_ptr $all_si_pins {
+        # 根据指针查 net 名字 
+        set net [dbGet $inst_ptr.net.name]
+        
+        # 0x0 代表悬空/断开状态
+        if {$net == "0x0"} {
+            incr disconnected_cnt
+        }
+    }
+} else {
+    # 防呆设计：如果设计里根本没有扫描链
+    set total_scan_ffs 0
+}
+
+# 4. 打印最终的校验日志
+puts "---------------------------------------------------"
+puts "CDF-INFO: Total scan FFs found      : $total_scan_ffs"
+puts "CDF-INFO: Disconnected SI pins      : $disconnected_cnt"
+puts "---------------------------------------------------"
+
+# 如果两者数量不一致，可以给出一个显眼的警告
+if {$disconnected_cnt != $total_scan_ffs} {
+    puts "CDF-WARNING: Not all SI pins are disconnected! Please check!"
+}
 ##############################################################
 # END
 ##############################################################
