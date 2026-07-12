@@ -93,4 +93,35 @@
 对clock_path与data_path 分别set_max_transition，为后续DRV检查提供标准的同时帮助后续的optDesign进行更好的优化，需要注意的是man文档中有提及The software will pick the more agtgressive value of the two,即若设定的transition值小于lib中规定的值，通过-override 区强制覆盖.lib中的值
 place阶段的时序裕量较充足，因此需要通过uncertainty强行减少时序裕量防止工具进行优化时过于乐观，随着PR的进行，clock skew,route correlation(si)可以被工具计算出来，uncertainty应当逐级递减，最后uncertainty剩下的值留给jitter与extra margin
 综合工具做前端的扫描链的时候比较粗糙，是根据字母排序进行做的，为了使工具按照功能逻辑与时序约束进行合理的stdcell的摆放，需要在placement之前应针对DFT进行扫描连断开，即用脚本（yanfuti_procs.tcl)将触发器的SI端口全部断开。在标准单元的位置确定后，工具会根据它们在版图上的远近进行扫描链的重新连接。
-在place完成后使用scanReorder进行重连
+在place完成后使用scanReorder进行重连 
+
+innovus的plaement不是一步完成的，而是四阶段的串行流程：
+1
+place_opt_design自动执行：
+pre-place optimization   在放置前做一次逻辑优化 可以用setPlacecMode -pre_place_opt控制
+->coarse placement (GigaPlaec)    全局铺开stdcell + macro   可以用setPlaceMode -congEffort控制（density）
+->legalization (refinePlace internal)    消除overlap，推齐 row   可以用setPlaceMode -maxDensity控制 （legalize 密度上限）
+->post-place optimization     基于初始位置做逻辑优化     可以用setOptMode 控制   （优化开关）
+2
+2.1 密度控制：不要在setPlaceMode设 maxDensity，即不要用setPlaceMode -maxDensity 0.85而是要用setOptMode -maxDensity 0.85.setOptMode -maxDensity 控制的是优化阶段的密度上限（post-place opt 和 routing 后 resize）。setPlaceMode 中有 -maxDensity 参数但它是合法化阶段的限制，设置了可能抑制正常 place 行为。分开设，语义清晰。
+2.2拥塞：high才合法化. setPlacecMode -placce_global_cong_effort high     TCR(官方命令参考手册）中place_global_cong_effort合法值：low / medium / high。默认medium。设 high 时,GigaPlace在粗放置阶段考虑拥塞分布，防止局部过密导致后期routing DRC堆积。
+3.
+refinePlace-ECO模式下用对三个flag   当只改了几个单元，不想重新跑整个 place_opt_design 时： refinePlace -eco -inst {u_div/reg_a u_div/reg_b}  -eco  ECO模式---只有影响区域被重新合法化    -inst 指定要重放的实例列表        -area 指定区域的精确边界 {lx ly ux uy}
+4
+placeSpareModule - 预留ECO空间    在placement 前插入备用单元 （未来ECO换单元时不用动布局）：
+placeSpareModule \
+  -moduleName spare_eco \     插入数量
+  -numModules 10 \      网格间距
+  -stepx 15.0 \      网格间距
+  -stepy 15.0 \      同上
+  -util 0.5         每个module内的利用率 （但 -numModules 时不生效）  手册原文："The placeSpareModule command does not honor -util when -numModules switch is used."
+5
+  密度-拥塞平衡策略
+  密度高->单元挤->局部拥塞->routing DRC堆积。 调密度的三个层级：
+  1，全局 setPlaceMode -maxDensity 影响整个设计 没有特定热点时使用
+  2，区域 createPlaceBlockage -density 指定区域 某块macro周围DRV多时使用
+  3.instance setPlaceMode -moduleDensity 单个模块 某个子模块内时序差时使用
+  调试顺序：先看routing DRC分布->找局部热点->用区域blockage降那块的密度->全局保持高密度
+6
+  Scan Chain Reorder 略
+  关于是否需要在place_opt_design后清 VDD/VSS，必须重新运行sroute的问题。我的理解是stdcell吸附在site上，rail打在两行横向的row之间，place_opt_design所造成的stdcell位置的改变本质上是它在grid上的滑行或者跨行移动，因为相邻row的Row Flipping机制，单元即使跨行移动，内部的VDD/VSS pin也会随之翻转，从而始终与新位置连续的power rail完美重合，在这种情况下布局引擎没必要清除rail，因此也不需要在place_opt_design后重新用sroute绕线
