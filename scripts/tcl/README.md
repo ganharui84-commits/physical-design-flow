@@ -93,9 +93,7 @@
 注意给晶体管接TIEHI与TIELO防晶体管被击穿(setTieHiloMode),这里规定一个TIEHI单元最多只能给两个逻辑门体提供高电平(-maxFanout 2)
 对clock_path与data_path 分别set_max_transition，为后续DRV检查提供标准的同时帮助后续的optDesign进行更好的优化，需要注意的是man文档中有提及The software will pick the more agtgressive value of the two,即若设定的transition值小于lib中规定的值，通过-override 区强制覆盖.lib中的值
 place阶段的时序裕量较充足，因此需要通过uncertainty强行减少时序裕量防止工具进行优化时过于乐观，随着PR的进行，clock skew,route correlation(si)可以被工具计算出来，uncertainty应当逐级递减，最后uncertainty剩下的值留给jitter与extra margin
-综合工具做前端的扫描链的时候比较粗糙，是根据字母排序进行做的，为了使工具按照功能逻辑与时序约束进行合理的stdcell的摆放，需要在placement之前应针对DFT进行扫描连断开，即用脚本（yanfuti_procs.tcl)将触发器的SI端口全部断开。在标准单元的位置确定后，工具会根据它们在版图上的远近进行扫描链的重新连接。
-在place完成后使用scanReorder进行重连 
-
+综合工具做前端的扫描链的时候比较粗糙，是根据字母排序进行做的，为了使工具按照功能逻辑与时序约束进行合理的stdcell的摆放，需要在placement之前应针对DFT进行扫描连断开，因为此项目中缺少综合出的DEF库，所以用脚本（yanfuti_procs.tcl)将触发器的SI端口全部断开，以便于流程的继续推进 
 innovus的plaement不是一步完成的，而是四阶段的串行流程：
 1
 place_opt_design自动执行：
