@@ -1,0 +1,3 @@
+Halo should be created around block %s and snapping rules are not checked since it's %s is not multiple of default tech site's %s
+soulation：snapFPlan -all
+about"snapFPlan:Snaps floorplan objects to the grip.You can use this command after importing the design      -all Specifies the snapping of all supported object types 
