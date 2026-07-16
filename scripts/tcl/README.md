@@ -124,3 +124,4 @@ placeSpareModule \
 6
   Scan Chain Reorder 略
   关于是否需要在place_opt_design后清 VDD/VSS，必须重新运行sroute的问题。我的理解是stdcell吸附在site上，rail打在两行横向的row之间，place_opt_design所造成的stdcell位置的改变本质上是它在grid上的滑行或者跨行移动，因为相邻row的Row Flipping机制，单元即使跨行移动，内部的VDD/VSS pin也会随之翻转，从而始终与新位置连续的power rail完美重合，在这种情况下布局引擎没必要清除rail，因此也不需要在place_opt_design后重新用sroute绕线
+  Hotspot在place_opt_design后检查，reportCongestion > ${reports_dir}/post_place_congestion.rpt       reportCongestion -hotSpot采取的策略通常有加Placement Blockage，设置Cell Padding
