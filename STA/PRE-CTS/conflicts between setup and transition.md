@@ -10,3 +10,5 @@
 使用report_timing -max_paths 1 -nworst 1 -path_type full_clock -net查看最差的违例路径可以明显验证理论的正确性（接近一个T的required time与超过一个T的arrived time，仅仅十分之一个T的setup，报告中大量的INV,BUF）如图。
 <img width="2208" height="1141" alt="屏幕截图 2026-09-05 182117" src="https://github.com/user-attachments/assets/a443d2f3-4327-4fc0-8846-b86de2c39ce4" />
 修复策略即放宽max_transition的约束，一般给时钟周期的10%-15%，因为套用的14nm的flow，此时也对clock_max_transition修改为0.2（通常取时钟周期的5%左右），不同工艺节点设置的capatience也不同，这里不过多赘述。
+transition放宽后重新做PRE-CTS，随后用report_timing -to mcore0/ahb0/r_reg_hslave_1/DFF/D -path_type full_clock -net报表之前的最差路径，如图时序收敛，setup大于重新做之前的
+<img width="1177" height="343" alt="image" src="https://github.com/user-attachments/assets/62d260e4-fae3-407e-a882-adf1712d46bb" />
