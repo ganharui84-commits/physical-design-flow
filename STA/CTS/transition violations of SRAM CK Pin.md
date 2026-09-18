@@ -1,12 +1,12 @@
 从lib文件中grep output_current & ecsm_waveform 未找到CCS等描述，grep "delay_model"后只报出 table_lookup。即该库是纯NLDM库，因此下面的STA分析并不会涉及CCS/ECSM 模型而是采用将Driver等效成电压源+wire&load等效成Ceff的模型（戴维南模型）
 在做完CTS，检查过skew，逻辑深度一类树的指标后检查transition报告后发现了针对SRAM CK Pin的transition违例
-
+<img width="611" height="40" alt="image" src="https://github.com/user-attachments/assets/0dcaa2d2-a088-4c23-84f2-eca72db65e18" />
 info中提到，6 violations on big pin capatience net,也就是这个违例大概率是因为SRAM CK的高capatience引起的。再分析之前先针对driver的输出引脚查看负载电容主要受哪方面影响
 set drv "其中一路driver_pin"
 get_ccopt_clock_tree_capacitance $drv
 get_ccopt_clock_tree_capacitance $drv -load
 get_ccopt_clock_tree_capacitance $drv -wire
-
+<img width="919" height="186" alt="屏幕截图 2026-09-19 022515" src="https://github.com/user-attachments/assets/ce03ccdf-62cb-466d-8f9c-c8abb482eaf4" />
 报表可以看出，load占大头，由net_cap也可看出电阻屏蔽效应几乎没影响，SRAM CK的巨大pin capacitance基本完整地作用在driver上，Ceff基本等于Cload
 分析：目前是CK Pin的transition违例，其本质是Driver的waveform传递到SRAM CKPin后工具根据AWE一类的算法算出waveform的slew，记作input slew。短net高load造成了过高的Ceff，严重拉缓了out waveform，以至于传递到SRAM CK的in waveform无法满足库规定的slew检查。
 最好的方法是将Driver换成驱动能力更强的cell(本质是换成更宽更大的MOS管，这类管子的R更小，因为τ≈Rdriver​Cload，Rdriver越小，τ越小，充放电越厉害，波形越陡峭）​
@@ -14,7 +14,7 @@ get_ccopt_clock_tree_capacitance $drv -wire
 因此寄希望于重做CTS，工具通过CCopt_design将其更换，以下是我的排查过程
 首先get_ccopt_property buffer_cells 查出CLKBUFX4 6 8 12，说明库中并不缺少大驱动能力的buffer，进一步考虑可能是因为针对这些路径的transition约束过紧，从而导致工具不选择大的buffer
 grep -A 30 "pin( *CK1)" ..... 抓取其中一个pin的信息，抓出库定义的1ns的约束
-
+<img width="919" height="186" alt="屏幕截图 2026-09-19 022515" src="https://github.com/user-attachments/assets/e4c28bb1-6c21-4ba5-ac1a-6fd2b2e9d0b4" />
 因此针对这些路径放宽transition约束:set_max_transition 1.0 [get_pins proc0/cmem0/*/u0/*/CK*],sizeof_collection报出6条后restoreDesign，重做CTS
 出乎意料的是重做CTS后仍然是这几条路径的violation，并且用set_max_transition给的1.0并没起作用，工具依然按照0.5约束。
 重新set_max_transition,接下来sizeof_collection,get_object_name $sram_cks进行检查，确定进行了约束。
@@ -47,13 +47,13 @@ set_interactive_constraint_modes [all_constraint_modes]
 set_max_transition 1.0 [get_pins proc0/cmem0/*/u0/*/CK*] -override
 set_interactive_constraint_modes {}
 然而新的报表依然违例，工具依然选择BUFX4
-
+<img width="919" height="186" alt="屏幕截图 2026-09-19 022515" src="https://github.com/user-attachments/assets/733e99c2-f0fb-4153-99c1-725c5129e873" />
 get_ccopt_property buffer_cells
 report_ccopt_cell_filtering_reasons
 进行检查，报表如下
-
-发现强力的cell都被过滤，原因是unbalanced rise/fall delays，说明大概率不是因为约束而不用更强力的cell，而是CCOPT一开始就没法从库中选中这些cell。再看get_ccopt_property buffer_cells突然发现工具报出的不是buffer而是INV，说明大概率一开始就把buffer和inv写反了，检查setup果然不出所料
-
+<img width="919" height="186" alt="屏幕截图 2026-09-19 022515" src="https://github.com/user-attachments/assets/7f5579de-2f67-4f0a-b8ab-c48fb2821d20" />
+发现强力的cell都被过滤，原因是unbalanced rise/fall delays，说明大概率不是因为约束而不用更强力的cell，而是CCOPT一开始就没法从库中选中这些cell。再看get_ccopt_property buffer_cells突然发现工具报出的不是buffer而是INV，说明大概率一开始就把buffer和inv写反了，检查setup.tcl果然不出所料
+<img width="919" height="186" alt="屏幕截图 2026-09-19 022515" src="https://github.com/user-attachments/assets/d1a422a9-530d-42e0-a317-21036688c0ab" />
 因此修改setup.tcl后重新将这几条路径的约束改为1.0，并进行CTS，报表如下。
-
+<img width="919" height="186" alt="屏幕截图 2026-09-19 022515" src="https://github.com/user-attachments/assets/6f622977-3313-4a42-8482-5bb41595320f" />
 暂时不值得因为这几个DRV破坏CTS，因此选择继续往下走。
