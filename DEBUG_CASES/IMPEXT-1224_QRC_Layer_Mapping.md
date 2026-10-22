@@ -9,13 +9,21 @@ Verification：独立 extractRC 成功，记录寄生电阻、电容统计。
 根据日志给出的路径查看自动生成的Layer Map Log,也可以发现没有给via10_cap建立对应的关系，但是更值得注意的是列表截止在Via10 -> via10_nocap 。却没有Metal11->metal11_conn，而GPDK45的完整工艺连接结构中恰好包含这些层，所以优先怀疑：QRC Tech File 包含更完整的顶层金属及特殊电容层结构，而 Innovus 加载的 LEF 没有对应的完整层定义。下一步先检查当前设计中有几层：dbGet head.layers.name
 <img width="2588" height="30" alt="image" src="https://github.com/user-attachments/assets/55b6da4b-616e-4ff3-a65d-a2654ac150ec" />
 dbGet后发现确实存在M11和Via10，所以上面怀疑的LEF缺少金属层并不成立。值得注意的是在QRC Via10对应的不是Via10_cap而是Via_nocap.GPDK45的工艺连接图描述了两种不同的连接关系：
-             metal11_conn
-                  │
-          ┌───────┴────────┐
-          │                │
-      via10_cap       via10_nocap
-          │                │
-       CapMetal       metal10_conn
+
+普通数字互连的路径是：
+LEF：                    QRC 工艺层：
+
+Metal11   ──────────→    metal11_conn
+   │                           │
+ Via10     ──────────→    via10_nocap
+   │                           │
+Metal10   ──────────→    metal10_conn
+另一条特殊的路径是：
+metal11_conn
+      │
+ via10_cap
+      │
+  CapMetal
 然而可以看到LEF中虽然定义了Metal10 Via10 Metal11但是没有定义CapMetal
 <img width="781" height="744" alt="image" src="https://github.com/user-attachments/assets/573a82b2-9a87-4e2a-9831-73c929a63c5e" />
 为了确保结论的准确性，进一步查看library中的Tech LEF grep -nE '^[[:space:]]*LAYER[[:space:]]+(M10|M11|Metal10|Metal11|Via10|CapMetal)([[:space:]]|$)' <Tech_LEF文件路径>
