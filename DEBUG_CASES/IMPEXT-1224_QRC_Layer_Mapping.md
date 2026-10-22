@@ -26,4 +26,17 @@ metal11_conn
   CapMetal
 可以理解为，Via1-Via9是普通层间连接。顶层额外存在特殊的CapMetal电容金属层结构，Via10存在两种连接方式：Via10->via10_cap   Via10->via10_nocap.这里选择的是普通互连对应的via10_nocap
 <img width="781" height="744" alt="image" src="https://github.com/user-attachments/assets/573a82b2-9a87-4e2a-9831-73c929a63c5e" />
-
+接下来检查layer type和原始LEF，判断是否对layer和cut的定义存在错误。
+dbGet $m11.type
+dbGet $via10.type
+sed -n '590,660p' <Tech_LEF文件路径>
+检查后发现普通顶层互连的层定义没有明显异常，root cause可锁定在不是LEF的Layer Type有问题，而是Quantus自动建立的层对应关系不完整方面。因此接下来寻找工艺库自带的qrc.map,找到一份可信的参考映射，和Quantus自动生成的映射进行对照
+打开map文件如图
+<img width="494" height="599" alt="image" src="https://github.com/user-attachments/assets/5dd2c8ef-9ff9-42b0-a52d-87bb15100b3e" />
+可以发现PDK自带的map明确包含Metal11->metal11_conn，README也有说明这套QRC technology files can be used with digital implementation flows。因此，可使用该Layer Map做一次独立的RC Extraction测试：
+set map_file "/实际路径/映射文件名"
+setExtractRCMode -lefTechFileMap $map_file
+getExtractRCMode
+extractRC -lefTechFileMap
+此时报出error（IMPEXT-1438）：Error reading layermap file 'qrc.map'.Only CCL style syntax of layer map file is suported using "setExtractRCMode -lefTechFileMap".Correct the input specified and run again
+man setExtractRCMode查看相关要求后重新生成一份，按照上述流程重新跑通RCextraction
