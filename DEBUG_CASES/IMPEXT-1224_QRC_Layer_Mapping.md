@@ -10,3 +10,5 @@ Verification：独立 extractRC 成功，记录寄生电阻、电容统计。
 <img width="781" height="744" alt="image" src="https://github.com/user-attachments/assets/573a82b2-9a87-4e2a-9831-73c929a63c5e" />
 dbGet后发现确实存在M11和Via10，所以上面怀疑的LEF缺少金属层并不成立。
 <img width="2588" height="30" alt="image" src="https://github.com/user-attachments/assets/55b6da4b-616e-4ff3-a65d-a2654ac150ec" />
+为了确保结论的准确性，进一步查看library中的Tech LEF grep -nE '^[[:space:]]*LAYER[[:space:]]+(M10|M11|Metal10|Metal11|Via10|CapMetal)([[:space:]]|$)' <Tech_LEF文件路径>
+发现LEF中确实存在Metal11 Via10.因此基本确定error的原因是QRC Tech File包含特殊电容结构，而数字实现所用的Tech LEF没有完整描述这些特殊层，导致Quantus无法正确匹配上层工艺连接关系（为确保该结论的准确性，先对LEF的Metal10 Via10 Metal11的TYPE进行检查，以及对三个layer的定义顺序和结束位置进行检查，确保Tech LEF的上层Routing/Cut结构本身是否正常。 sed -n '590,660p' <Tech_LEF文件路径>
