@@ -8,5 +8,5 @@ Verification：独立 extractRC 成功，记录寄生电阻、电容统计。
 在之前的cmd配置中，set extract Mode 选用了高精度RC提取模型（-engine postRoute -effortlevel high)，输入opt命令后，innvous在优化之前会调用IQuantas进行高精度的rc提取，这个工具在提取的时候会加载QRC Tech File和Tech LEF，生成一份layer mapping帮助它们建立映射关系。问题出在QRC Tech与LEF并没有成功映射：ERROR: (IMPEXT-1224):Consecutive cut layers 'via10_nocap' and 'via10_cap'   found in Quantus QRC technology file  but not in LEF data of Innovus. 后面跟着：ERROR: (LS_PLACEOPT::runCurrentState):Internal failure executing '::LS_PLACEOPT::PR:doExtrInit'
 根据日志给出的路径查看自动生成的Layer Map Log,也可以发现没有给via10_cap建立对应的关系，但是更值得注意的是列表截止在Via10 -> via10_nocap 。却没有Metal11->metal11_conn，而GPDK45的完整工艺连接结构中恰好包含这些层，所以优先怀疑：QRC Tech File 包含更完整的顶层金属及特殊电容层结构，而 Innovus 加载的 LEF 没有对应的完整层定义。下一步先检查当前设计中有几层：dbGet head.layers.name
 <img width="781" height="744" alt="image" src="https://github.com/user-attachments/assets/573a82b2-9a87-4e2a-9831-73c929a63c5e" />
-dbGet后发现确实存在M11和Via10，所以上面怀疑的LEF缺少金属层并不成立。此外值得注意的是：数据库中的层名和Quantus自动生成的Layer Map中的层名明显不同（innovus dbGet M1 自动生成的Layer Map：Metal1->metal1_conn),可能意味着配置错误，应当确认自动映射究竟依据了哪套层定义
+dbGet后发现确实存在M11和Via10，所以上面怀疑的LEF缺少金属层并不成立。
 <img width="2588" height="30" alt="image" src="https://github.com/user-attachments/assets/55b6da4b-616e-4ff3-a65d-a2654ac150ec" />
